@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Analytics Pro Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #4f46e5;     /* Indigo 600 */
+            --primary-hover: #4338ca;
+            --bg-body: #f3f4f6;     /* Gray 100 */
+            --bg-sidebar: #ffffff;
+            --bg-card: #ffffff;
+            --text-main: #1f2937;   /* Gray 800 */
+            --text-muted: #6b7280;  /* Gray 500 */
+            --border: #e5e7eb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Dark Mode Variables */
+        .dark-mode {
+            --bg-body: #111827;     /* Gray 900 */
+            --bg-sidebar: #1f2937;  /* Gray 800 */
+            --bg-card: #1f2937;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #374151;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
+        body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .brand { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .filter-group { margin-bottom: 20px; }
+        .filter-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        select, .search-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-body);
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--border); }
+
+        /* --- Main Content --- */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { margin: 0; font-size: 24px; }
+        
+        .header-actions { display: flex; gap: 10px; }
+        .theme-toggle { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-muted); }
+
+        /* --- KPI Grid --- */
+        .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .kpi-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .kpi-title { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .kpi-value { font-size: 28px; font-weight: 700; margin-top: 5px; color: var(--text-main); }
+        .kpi-sub { font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 5px; }
+        .text-danger { color: var(--danger); }
+        .text-success { color: var(--success); }
+
+        /* --- Charts Grid --- */
+        .charts-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .chart-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            min-height: 350px;
+            position: relative;
+        }
+        .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
+        .full-width { grid-column: span 2; }
+
+        /* --- Data Table --- */
+        .table-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .table-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .table-wrapper { max-height: 400px; overflow: auto; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-body); font-weight: 600; color: var(--text-muted); position: sticky; top: 0; }
+        tr:hover { background-color: rgba(79, 70, 229, 0.05); }
+
+        /* Utilities */
+        .hidden { display: none; }
+        
+        @media (max-width: 1024px) {
+            .charts-container { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            body { flex-direction: column; overflow: auto; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <i class="fa-solid fa-chart-line"></i> HR Analytics Pro
+        </div>
+
+        <div class="filter-group">
+            <button class="btn btn-primary" id="sampleBtn">
+                <i class="fa-solid fa-database"></i> Load Sample Data
+            </button>
+            <input type="file" id="fileUpload" hidden accept=".csv,.xlsx,.xls">
+            <button class="btn btn-outline" onclick="document.getElementById('fileUpload').click()">
+                <i class="fa-solid fa-upload"></i> Upload CSV/Excel
+            </button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+
+        <div class="filter-group">
+            <span class="filter-label">Department</span>
+            <select id="filterDept"><option value="All">All Departments</option></select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Job Role</span>
+            <select id="filterRole"><option value="All">All Roles</option></select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Education</span>
+            <select id="filterEdu"><option value="All">All Levels</option></select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Gender</span>
+            <select id="filterGender"><option value="All">All Genders</option></select>
+        </div>
+
+        <button class="btn btn-outline" id="resetBtn" style="margin-top: auto;">
+            <i class="fa-solid fa-rotate-left"></i> Reset Filters
+        </button>
+    </aside>
+
+    <main class="main-content">
+        <div class="header">
+            <div>
+                <h2>Dashboard Overview</h2>
+                <span style="color: var(--text-muted); font-size: 14px;" id="lastUpdated">No data loaded</span>
+            </div>
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle"><i class="fa-solid fa-moon"></i></button>
+                <button class="btn btn-primary" id="exportBtn" style="width: auto; margin:0; padding: 10px 20px;">
+                    <i class="fa-solid fa-download"></i> Export Report
+                </button>
+            </div>
+        </div>
+
+        <div class="kpi-container">
+            <div class="kpi-card">
+                <div class="kpi-title">Total Employees</div>
+                <div class="kpi-value" id="kpiTotal">0</div>
+                <div class="kpi-sub"><i class="fa-solid fa-users"></i> &nbsp;Active Count</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Attrition Rate</div>
+                <div class="kpi-value text-danger" id="kpiAttrition">0%</div>
+                <div class="kpi-sub" id="kpiAttritionCount">0 Employees left</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Avg. Salary</div>
+                <div class="kpi-value" id="kpiSalary">$0</div>
+                <div class="kpi-sub">Monthly Gross</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Avg. Tenure</div>
+                <div class="kpi-value" id="kpiTenure">0</div>
+                <div class="kpi-sub">Years at Company</div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card full-width">
+                <div class="chart-title">Attrition by Department</div>
+                <div style="height: 300px;"><canvas id="deptChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Workforce Demographics (Age)</div>
+                <div style="height: 250px;"><canvas id="ageChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Gender Distribution</div>
+                <div style="height: 250px; display: flex; justify-content: center;"><canvas id="genderChart"></canvas></div>
+            </div>
+            <div class="chart-card full-width">
+                <div class="chart-title">Salary Analysis by Job Role</div>
+                <div style="height: 300px;"><canvas id="roleChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title" style="margin:0">Employee Details</div>
+                <input type="text" id="tableSearch" class="search-input" style="width: 250px;" placeholder="Search employee...">
+            </div>
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Dept</th>
+                            <th>Role</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Salary</th>
+                            <th>Attrition</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="7" style="text-align:center; padding: 20px;">No data loaded</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+<script>
+    // --- Configuration & State ---
+    let rawData = [];
+    let filteredData = [];
+    let charts = {};
+    
+    // Currency Formatter
+    const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Theme Toggle
+        const themeBtn = document.getElementById('themeToggle');
+        themeBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            themeBtn.innerHTML = document.body.classList.contains('dark-mode') ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+            updateChartsTheme(); 
+        });
+
+        // Event Listeners
+        document.getElementById('sampleBtn').addEventListener('click', loadSampleData);
+        document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
+        document.getElementById('resetBtn').addEventListener('click', resetFilters);
+        document.getElementById('exportBtn').addEventListener('click', exportData);
+        document.getElementById('tableSearch').addEventListener('input', (e) => renderTable(e.target.value));
+
+        // Filter Listeners
+        ['filterDept', 'filterRole', 'filterEdu', 'filterGender'].forEach(id => {
+            document.getElementById(id).addEventListener('change', applyFilters);
+        });
+    });
+
+    // --- Data Loading ---
+    function loadSampleData() {
+        // Generating robust sample data
+        rawData = Array.from({length: 100}, (_, i) => {
+            const depts = ['Sales', 'R&D', 'HR', 'Marketing'];
+            const roles = ['Executive', 'Manager', 'Analyst', 'Director', 'Rep'];
+            const dept = depts[Math.floor(Math.random() * depts.length)];
+            const isAttrition = Math.random() > 0.85 ? 'Yes' : 'No';
+            return {
+                EmployeeID: 1000 + i,
+                Age: Math.floor(Math.random() * (60 - 22) + 22),
+                Attrition: isAttrition,
+                Department: dept,
+                JobRole: roles[Math.floor(Math.random() * roles.length)],
+                Education: ['Bachelor', 'Master', 'PhD'][Math.floor(Math.random() * 3)],
+                Gender: Math.random() > 0.5 ? 'Male' : 'Female',
+                YearsAtCompany: Math.floor(Math.random() * 15),
+                MonthlyIncome: Math.floor(Math.random() * (15000 - 3000) + 3000)
+            };
+        });
+        document.getElementById('lastUpdated').innerText = `Data loaded: ${new Date().toLocaleTimeString()}`;
+        initData();
+    }
+
+    function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const wb = XLSX.read(evt.target.result, {type: 'binary'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            rawData = XLSX.utils.sheet_to_json(ws);
+            document.getElementById('lastUpdated').innerText = `File: ${file.name}`;
+            initData();
+        };
+        reader.readAsBinaryString(file);
+    }
+
+    function initData() {
+        populateSelects();
+        applyFilters();
+    }
+
+    // --- Filtering ---
+    function populateSelects() {
+        const fill = (id, key) => {
+            const select = document.getElementById(id);
+            const values = [...new Set(rawData.map(d => d[key]))].sort();
+            select.innerHTML = `<option value="All">All ${key}s</option>` + 
+                               values.map(v => `<option value="${v}">${v}</option>`).join('');
+        };
+        fill('filterDept', 'Department');
+        fill('filterRole', 'JobRole');
+        fill('filterEdu', 'Education');
+        fill('filterGender', 'Gender');
+    }
+
+    function applyFilters() {
+        const filters = {
+            Department: document.getElementById('filterDept').value,
+            JobRole: document.getElementById('filterRole').value,
+            Education: document.getElementById('filterEdu').value,
+            Gender: document.getElementById('filterGender').value
+        };
+
+        filteredData = rawData.filter(item => {
+            return Object.keys(filters).every(key => 
+                filters[key] === 'All' || item[key] == filters[key]
+            );
+        });
+
+        updateDashboard();
+    }
+
+    function resetFilters() {
+        document.querySelectorAll('select').forEach(s => s.value = 'All');
+        applyFilters();
+    }
+
+    // --- Dashboard Rendering ---
+    function updateDashboard() {
+        const total = filteredData.length;
+        if (total === 0) return; // Add empty state handling here if desired
+
+        // 1. KPIs
+        const attritionCount = filteredData.filter(d => d.Attrition === 'Yes').length;
+        const totalIncome = filteredData.reduce((acc, d) => acc + Number(d.MonthlyIncome || 0), 0);
+        const totalTenure = filteredData.reduce((acc, d) => acc + Number(d.YearsAtCompany || 0), 0);
+
+        document.getElementById('kpiTotal').innerText = total;
+        document.getElementById('kpiAttrition').innerText = ((attritionCount / total) * 100).toFixed(1) + '%';
+        document.getElementById('kpiAttritionCount').innerText = `${attritionCount} Employees left`;
+        document.getElementById('kpiSalary').innerText = money.format(totalIncome / total);
+        document.getElementById('kpiTenure').innerText = (totalTenure / total).toFixed(1) + ' Years';
+
+        // 2. Charts
+        renderCharts();
+
+        // 3. Table
+        renderTable('');
+    }
+
+    function renderCharts() {
+        const isDark = document.body.classList.contains('dark-mode');
+        const textColor = isDark ? '#9ca3af' : '#6b7280';
+        const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+        Chart.defaults.color = textColor;
+        Chart.defaults.borderColor = gridColor;
+
+        // Helper: Group By
+        const groupBy = (key) => {
+            const counts = {};
+            filteredData.forEach(d => {
+                counts[d[key]] = (counts[d[key]] || 0) + 1;
+            });
+            return { labels: Object.keys(counts), data: Object.values(counts) };
+        };
+
+        // Chart 1: Attrition by Dept (Horizontal Bar)
+        const depts = [...new Set(filteredData.map(d => d.Department))];
+        const attritionByDept = depts.map(dept => 
+            filteredData.filter(d => d.Department === dept && d.Attrition === 'Yes').length
+        );
+        createChart('deptChart', 'bar', {
+            labels: depts,
+            datasets: [{
+                label: 'Attrition Count',
+                data: attritionByDept,
+                backgroundColor: '#ef4444',
+                borderRadius: 4
+            }]
+        }, { indexAxis: 'y' });
+
+        // Chart 2: Age Distribution (Line/Area)
+        const ages = filteredData.map(d => d.Age).sort((a,b)=>a-b);
+        // Create bins
+        const ageBins = {};
+        ages.forEach(a => {
+            const bin = Math.floor(a/5)*5; // 20, 25, 30...
+            const label = `${bin}-${bin+4}`;
+            ageBins[label] = (ageBins[label] || 0) + 1;
+        });
+        createChart('ageChart', 'line', {
+            labels: Object.keys(ageBins),
+            datasets: [{
+                label: 'Employees',
+                data: Object.values(ageBins),
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                fill: true,
+                tension: 0.4
+            }]
+        });
+
+        // Chart 3: Gender (Doughnut)
+        const genderData = groupBy('Gender');
+        createChart('genderChart', 'doughnut', {
+            labels: genderData.labels,
+            datasets: [{
+                data: genderData.data,
+                backgroundColor: ['#4f46e5', '#ec4899', '#10b981'],
+                borderWidth: 0
+            }]
+        });
+
+        // Chart 4: Salary by Role (Bar)
+        const roles = [...new Set(filteredData.map(d => d.JobRole))];
+        const avgSalByRole = roles.map(role => {
+            const group = filteredData.filter(d => d.JobRole === role);
+            const sum = group.reduce((acc, d) => acc + Number(d.MonthlyIncome), 0);
+            return group.length ? (sum / group.length) : 0;
+        });
+        createChart('roleChart', 'bar', {
+            labels: roles,
+            datasets: [{
+                label: 'Avg Salary ($)',
+                data: avgSalByRole,
+                backgroundColor: '#10b981',
+                borderRadius: 4
+            }]
+        });
+    }
+
+    function createChart(id, type, data, extraOptions = {}) {
+        if (charts[id]) charts[id].destroy();
+        const ctx = document.getElementById(id).getContext('2d');
+        charts[id] = new Chart(ctx, {
+            type: type,
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: type !== 'doughnut' ? { y: { beginAtZero: true } } : {},
+                ...extraOptions
+            }
+        });
+    }
+
+    function updateChartsTheme() {
+        if(filteredData.length > 0) renderCharts();
+    }
+
+    // --- Table & Export ---
+    function renderTable(searchQuery) {
+        const tbody = document.querySelector('#dataTable tbody');
+        const query = searchQuery.toLowerCase();
+        
+        // Filter for search + Limit to 100 rows for performance
+        const displayData = filteredData.filter(d => 
+            Object.values(d).some(val => String(val).toLowerCase().includes(query))
+        ).slice(0, 100);
+
+        if (displayData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No matching records</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = displayData.map(d => `
+            <tr>
+                <td><b>#${d.EmployeeID}</b></td>
+                <td>${d.Department}</td>
+                <td>${d.JobRole}</td>
+                <td>${d.Age}</td>
+                <td>${d.Gender}</td>
+                <td>${money.format(d.MonthlyIncome)}</td>
+                <td>
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; 
+                    background: ${d.Attrition === 'Yes' ? '#fee2e2' : '#dcfce7'}; 
+                    color: ${d.Attrition === 'Yes' ? '#ef4444' : '#16a34a'};">
+                        ${d.Attrition}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function exportData() {
+        if (!filteredData.length) return alert("No data to export");
+        const ws = XLSX.utils.json_to_sheet(filteredData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "HR Data");
+        XLSX.writeFile(wb, "HR_Analytics_Export.xlsx");
+    }
+
+</script>
+</body>
+</html>
