@@ -1,4 +1,4 @@
-# 📊 HR Analytics Pro Dashboard
+# 📊 HR Analytics Dashboard
 
 A modern, responsive, and standalone HR Analytics Dashboard built with vanilla JavaScript. This tool visualizes workforce metrics, attrition rates, and demographic distributions using interactive charts and dynamic data tables.
 
