@@ -2,9 +2,6 @@
 
 A modern, responsive, and standalone HR Analytics Dashboard built with vanilla JavaScript. This tool visualizes workforce metrics, attrition rates, and demographic distributions using interactive charts and dynamic data tables.
 
-![Dashboard Preview](https://via.placeholder.com/1000x500?text=Dashboard+Screenshot+Here)
-*(Note: Replace the link above with a screenshot of your actual dashboard once hosted)*
-
 ## 🚀 Features
 
 * **Single-File Architecture:** No build steps, `npm` installs, or backend required. Just open the HTML file.
